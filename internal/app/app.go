@@ -9,18 +9,21 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
-	"strings"
 
 	"github.com/GustavPetterssonBjorklund/claude-env-router/internal/config"
 	cerenv "github.com/GustavPetterssonBjorklund/claude-env-router/internal/env"
 	"github.com/GustavPetterssonBjorklund/claude-env-router/internal/runner"
+	"github.com/GustavPetterssonBjorklund/claude-env-router/internal/tui"
 )
 
 const binaryName = "cer"
 
 // Run executes the CLI and returns a process exit code.
 func Run(args []string, stdout, stderr io.Writer) int {
+	return RunWithInput(args, os.Stdin, stdout, stderr)
+}
+
+func RunWithInput(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	opts, err := parseArgs(args)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
@@ -33,22 +36,58 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return 0
 	}
 
+	if opts.profile == "" && !isInteractive(stdin, stdout) {
+		fmt.Fprintln(stderr, "no profile specified; pass a profile or run cer interactively")
+		return 2
+	}
+
 	cfgPath, err := config.ResolvePath(opts.configPath)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1
 	}
 
-	cfg, err := config.LoadFile(cfgPath)
+	cfg, err := loadConfigForMode(cfgPath, opts.profile == "")
 	if err != nil {
 		fmt.Fprintf(stderr, "load config: %v\n", err)
 		return 1
 	}
 
 	if opts.profile == "" {
-		printProfiles(stdout, cfg)
-		printUsage(stdout)
-		return 2
+		result, err := tui.Run(tui.Input{
+			Config: cfg,
+			Stdin:  stdin,
+			Stdout: stdout,
+		})
+		if err != nil {
+			fmt.Fprintf(stderr, "run tui: %v\n", err)
+			return 1
+		}
+		if result.Canceled {
+			return 0
+		}
+		if result.Created != nil {
+			editor := os.Getenv("EDITOR")
+			if !editorConfigured(editor) {
+				fmt.Fprintln(stderr, "EDITOR is not set")
+				return 1
+			}
+			envPath, err := createProfile(cfgPath, cfg, *result.Created)
+			if err != nil {
+				fmt.Fprintf(stderr, "create profile: %v\n", err)
+				return 1
+			}
+			if err := openEditor(editor, envPath, stdin, stdout, stderr); err != nil {
+				fmt.Fprintf(stderr, "edit %s: %v\n", envPath, err)
+				return 1
+			}
+			cfg, err = config.LoadFile(cfgPath)
+			if err != nil {
+				fmt.Fprintf(stderr, "load config: %v\n", err)
+				return 1
+			}
+		}
+		opts.profile = result.Profile
 	}
 
 	profile, ok := cfg.Profiles[opts.profile]
@@ -75,70 +114,4 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	}
 
 	return 0
-}
-
-type options struct {
-	configPath string
-	profile    string
-	claudeArgs []string
-	help       bool
-}
-
-func parseArgs(args []string) (options, error) {
-	var opts options
-	if len(args) == 0 {
-		args = []string{binaryName}
-	}
-
-	for i := 1; i < len(args); i++ {
-		arg := args[i]
-		switch arg {
-		case "-h", "--help":
-			opts.help = true
-		case "-c", "--config":
-			i++
-			if i >= len(args) {
-				return opts, fmt.Errorf("%s requires a path", arg)
-			}
-			opts.configPath = args[i]
-		case "--":
-			if i+1 < len(args) {
-				opts.claudeArgs = append(opts.claudeArgs, args[i+1:]...)
-			}
-			return opts, nil
-		default:
-			if strings.HasPrefix(arg, "-") {
-				return opts, fmt.Errorf("unknown option %s", arg)
-			}
-			if opts.profile == "" {
-				opts.profile = arg
-			} else {
-				opts.claudeArgs = append(opts.claudeArgs, arg)
-			}
-		}
-	}
-
-	return opts, nil
-}
-
-func printUsage(w io.Writer) {
-	fmt.Fprintf(w, "Usage: %s [--config path] <profile> [-- claude args...]\n", binaryName)
-}
-
-func printProfiles(w io.Writer, cfg config.Config) {
-	if len(cfg.Profiles) == 0 {
-		fmt.Fprintln(w, "No profiles configured.")
-		return
-	}
-
-	names := make([]string, 0, len(cfg.Profiles))
-	for name := range cfg.Profiles {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	fmt.Fprintln(w, "Profiles:")
-	for _, name := range names {
-		fmt.Fprintf(w, "  %s\n", name)
-	}
 }

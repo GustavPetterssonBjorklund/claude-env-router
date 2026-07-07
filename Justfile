@@ -11,7 +11,7 @@ test:
 
 run *args:
     @if [ -z "{{args}}" ]; then \
-        GOCACHE={{gocache}} go run ./cmd/cer --help; \
+        CER_CONFIG={{cerconfig}} GOCACHE={{gocache}} go run ./cmd/cer; \
     else \
         set -- {{args}}; \
         if [ "${1:-}" = "--" ]; then shift; fi; \

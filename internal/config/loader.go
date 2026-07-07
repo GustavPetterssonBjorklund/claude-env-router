@@ -5,10 +5,12 @@ package config
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/GustavPetterssonBjorklund/claude-env-router/internal/detect"
@@ -45,6 +47,47 @@ func LoadFile(path string) (Config, error) {
 		return Config{}, fmt.Errorf("%s: %w", path, err)
 	}
 	return cfg, nil
+}
+
+func SaveFile(path string, cfg Config) error {
+	var buf bytes.Buffer
+	Write(&buf, cfg)
+
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
+	return os.WriteFile(path, buf.Bytes(), 0o600)
+}
+
+func Write(w io.Writer, cfg Config) {
+	fmt.Fprintf(w, "binary = %s\n", formatString(cfg.Binary))
+
+	names := make([]string, 0, len(cfg.Profiles))
+	for name := range cfg.Profiles {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		profile := cfg.Profiles[name]
+		fmt.Fprintf(w, "\n[profiles.%s]\n", name)
+		fmt.Fprintf(w, "env_files = %s\n", formatStringArray(profile.EnvFiles))
+		fmt.Fprintf(w, "args = %s\n", formatStringArray(profile.Args))
+
+		if len(profile.Env) == 0 {
+			continue
+		}
+
+		fmt.Fprintf(w, "\n[profiles.%s.env]\n", name)
+		keys := make([]string, 0, len(profile.Env))
+		for key := range profile.Env {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			fmt.Fprintf(w, "%s = %s\n", key, formatString(profile.Env[key]))
+		}
+	}
 }
 
 func Parse(file io.Reader) (Config, error) {
@@ -173,7 +216,9 @@ func stripComment(line string) string {
 func parseString(value string) (string, error) {
 	value = strings.TrimSpace(value)
 	if len(value) >= 2 && value[0] == '"' && value[len(value)-1] == '"' {
-		return strings.ReplaceAll(value[1:len(value)-1], `\"`, `"`), nil
+		parsed := strings.ReplaceAll(value[1:len(value)-1], `\"`, `"`)
+		parsed = strings.ReplaceAll(parsed, `\\`, `\`)
+		return parsed, nil
 	}
 	if value == "" {
 		return "", fmt.Errorf("empty string value")
@@ -192,12 +237,59 @@ func parseStringArray(value string) ([]string, error) {
 	}
 
 	var out []string
-	for _, part := range strings.Split(value, ",") {
-		parsed, err := parseString(strings.TrimSpace(part))
+	for _, part := range splitArrayParts(value) {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			return nil, fmt.Errorf("empty array element")
+		}
+		parsed, err := parseString(part)
 		if err != nil {
 			return nil, err
 		}
 		out = append(out, parsed)
 	}
 	return out, nil
+}
+
+func splitArrayParts(value string) []string {
+	var parts []string
+	start := 0
+	inQuote := false
+	escaped := false
+	for i, r := range value {
+		if escaped {
+			escaped = false
+			continue
+		}
+		if r == '\\' {
+			escaped = true
+			continue
+		}
+		if r == '"' {
+			inQuote = !inQuote
+			continue
+		}
+		if r == ',' && !inQuote {
+			parts = append(parts, value[start:i])
+			start = i + 1
+		}
+	}
+	return append(parts, value[start:])
+}
+
+func formatString(value string) string {
+	value = strings.ReplaceAll(value, `\`, `\\`)
+	value = strings.ReplaceAll(value, `"`, `\"`)
+	return `"` + value + `"`
+}
+
+func formatStringArray(values []string) string {
+	if len(values) == 0 {
+		return "[]"
+	}
+	parts := make([]string, 0, len(values))
+	for _, value := range values {
+		parts = append(parts, formatString(value))
+	}
+	return "[" + strings.Join(parts, ", ") + "]"
 }

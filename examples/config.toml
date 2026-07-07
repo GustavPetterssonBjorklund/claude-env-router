@@ -4,6 +4,10 @@ binary = "claude"
 env_files = ["personal.env"]
 args = []
 
+[profiles.test]
+env_files = ["test.env"]
+args = []
+
 [profiles.work]
 env_files = ["work.env"]
 args = []

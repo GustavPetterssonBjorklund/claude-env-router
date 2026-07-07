@@ -3,6 +3,7 @@
 `cer` runs Claude with environment variables from a named profile.
 
 ```sh
+cer
 cer --config examples/config.toml personal
 cer work -- --help
 ```

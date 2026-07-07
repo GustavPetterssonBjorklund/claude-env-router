@@ -1,6 +1,13 @@
 # Usage
 
-Run Claude with a named environment profile:
+Run `cer` without arguments to choose or create an environment profile interactively.
+New profiles create an env file and open it in `$EDITOR`:
+
+```sh
+cer
+```
+
+Run Claude directly with a named environment profile:
 
 ```sh
 cer personal

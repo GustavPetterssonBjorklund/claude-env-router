@@ -1,0 +1,4 @@
+/cer
+/dist/
+/tmp/
+*.env.local

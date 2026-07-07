@@ -1,0 +1,12 @@
+binary = "claude"
+
+[profiles.personal]
+env_files = ["personal.env"]
+args = []
+
+[profiles.work]
+env_files = ["work.env"]
+args = []
+
+[profiles.work.env]
+CLAUDE_CODE_USE_BEDROCK = "1"

@@ -2,3 +2,10 @@
 /dist/
 /tmp/
 *.env.local
+
+# examples/
+/examples/*.env
+!/examples/deepseek.env
+!/examples/personal.env
+!/examples/work.env
+!/examples/config.toml

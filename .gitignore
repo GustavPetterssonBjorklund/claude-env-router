@@ -2,6 +2,7 @@
 /dist/
 /tmp/
 *.env.local
+.run/
 
 # examples/
 /examples/*.env

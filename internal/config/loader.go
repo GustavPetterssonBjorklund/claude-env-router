@@ -16,8 +16,6 @@ import (
 	"github.com/GustavPetterssonBjorklund/claude-env-router/internal/detect"
 )
 
-const EnvConfigPath = "CER_CONFIG"
-
 func ResolvePath(explicit string) (string, error) {
 	if explicit != "" {
 		return explicit, nil

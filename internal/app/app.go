@@ -16,7 +16,15 @@ import (
 	"github.com/GustavPetterssonBjorklund/claude-env-router/internal/tui"
 )
 
-const binaryName = "cer"
+type Environment struct {
+	binaryName     string
+	claudeProcName string
+}
+
+var environment = Environment{
+	binaryName:     "cer",
+	claudeProcName: "claude",
+}
 
 // Run executes the CLI and returns a process exit code.
 func Run(args []string, stdout, stderr io.Writer) int {

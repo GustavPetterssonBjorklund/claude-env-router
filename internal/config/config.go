@@ -5,6 +5,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 )
 
 const (
@@ -12,7 +13,9 @@ const (
 	DefaultRouterBinaryName = "cer"
 	DefaultProfileName      = "default"
 	DefaultProfilesDir      = "profiles"
-	DefaultConfigDirName    = "claude-env-router"
+	DefaultConfigDirName    = "cer"
+	DefaultConfigFileName   = "config.toml"
+	EnvConfigPath           = "CER_CONFIG"
 )
 
 var (
@@ -30,7 +33,7 @@ var (
 		DefaultProfilesDir,
 	)
 	ConfigPath = envOrDefault(
-		"CLAUDE_ENV_ROUTER_CONFIG_PATH",
+		EnvConfigPath,
 		defaultConfigPath(),
 	)
 )
@@ -49,13 +52,13 @@ func defaultConfigPath() string {
 	if err != nil {
 		homeDir, homeErr := os.UserHomeDir()
 		if homeErr != nil {
-			return filepath.Join(".config", DefaultConfigDirName)
+			return filepath.Join(".config", DefaultConfigDirName, DefaultConfigFileName)
 		}
 
-		return filepath.Join(homeDir, ".config", DefaultConfigDirName)
+		return filepath.Join(homeDir, ".config", DefaultConfigDirName, DefaultConfigFileName)
 	}
 
-	return filepath.Join(configDir, DefaultConfigDirName)
+	return filepath.Join(configDir, DefaultConfigDirName, DefaultConfigFileName)
 }
 
 type FilePaths struct {
@@ -72,12 +75,12 @@ type Config struct {
 
 func New() Config {
 	return Config{
-		ClaudeEnvRouterBinary: ClaudeEnvRouterDefaultBinary,
-		Binary:                DefaultClaudeBinary,
+		ClaudeEnvRouterBinary: ClaudeEnvRouterBinary,
+		Binary:                ClaudeBinary,
 		FilePaths: FilePaths{
-			ConfigPath:  DefaultConfigPath,
+			ConfigPath:  ConfigPath,
 			ProfilesDir: ProfilesDir,
 		},
-		Profiles: LoadProfilesFromDir(ProfilesDir),
+		Profiles: make(map[string]Profile),
 	}
 }

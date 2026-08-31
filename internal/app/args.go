@@ -18,7 +18,7 @@ type options struct {
 func parseArgs(args []string) (options, error) {
 	var opts options
 	if len(args) == 0 {
-		args = []string{binaryName}
+		args = []string{environment.binaryName}
 	}
 
 	for i := 1; i < len(args); i++ {

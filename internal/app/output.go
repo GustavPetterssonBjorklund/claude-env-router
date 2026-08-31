@@ -12,7 +12,7 @@ import (
 )
 
 func printUsage(w io.Writer) {
-	fmt.Fprintf(w, "Usage: %s [--config path] <profile> [-- claude args...]\n", binaryName)
+	fmt.Fprintf(w, "Usage: %s [--config path] <profile> [-- claude args...]\n", environment.binaryName)
 }
 
 func printProfiles(w io.Writer, cfg config.Config) {

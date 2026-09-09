@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/GustavPetterssonBjorklund/claude-env-router/internal/config"
+	"github.com/GustavPetterssonBjorklund/claude-env-router/internal/vault"
 )
 
 func FromEnviron(environ []string) map[string]string {
@@ -39,7 +40,7 @@ func ToEnviron(env map[string]string) []string {
 	return out
 }
 
-func ApplyProfile(target map[string]string, baseDir string, profile config.Profile) error {
+func ApplyProfile(target map[string]string, baseDir string, profile config.Profile, secrets map[string]string) error {
 	for _, envFile := range profile.EnvFiles {
 		path := envFile
 		if !filepath.IsAbs(path) {
@@ -57,8 +58,31 @@ func ApplyProfile(target map[string]string, baseDir string, profile config.Profi
 	for key, value := range profile.Env {
 		target[key] = Expand(value, target)
 	}
+	for key, value := range secrets {
+		target[key] = Expand(value, target)
+	}
 
 	return nil
+}
+
+func LoadSecrets(path, profile string) (map[string]string, error) {
+	store := vault.Store{Path: path}
+	values, err := store.List(profile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	out := make(map[string]string, len(values))
+	for _, key := range values {
+		value, err := store.Get(profile, key)
+		if err != nil {
+			return nil, err
+		}
+		out[key] = value
+	}
+	return out, nil
 }
 
 func LoadDotenv(path string) (map[string]string, error) {

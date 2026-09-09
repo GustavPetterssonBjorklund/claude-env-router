@@ -60,6 +60,12 @@ func RunWithInput(args []string, stdin io.Reader, stdout, stderr io.Writer) int 
 		fmt.Fprintf(stderr, "load config: %v\n", err)
 		return 1
 	}
+	cfg.FilePaths.ConfigPath = cfgPath
+	cfg.FilePaths.VaultPath = filepath.Join(filepath.Dir(cfgPath), config.DefaultVaultFileName)
+
+	if opts.secretOp != "" {
+		return runSecretCommand(opts, cfg, stdin, stdout, stderr)
+	}
 
 	if opts.profile == "" {
 		result, err := tui.Run(tui.Input{
@@ -107,7 +113,12 @@ func RunWithInput(args []string, stdin io.Reader, stdout, stderr io.Writer) int 
 
 	envMap := cerenv.FromEnviron(os.Environ())
 	baseDir := filepath.Dir(cfgPath)
-	if err := cerenv.ApplyProfile(envMap, baseDir, profile); err != nil {
+	secrets, err := cerenv.LoadSecrets(cfg.FilePaths.VaultPath, opts.profile)
+	if err != nil {
+		fmt.Fprintf(stderr, "load secrets: %v\n", err)
+		return 1
+	}
+	if err := cerenv.ApplyProfile(envMap, baseDir, profile, secrets); err != nil {
 		fmt.Fprintf(stderr, "prepare environment: %v\n", err)
 		return 1
 	}

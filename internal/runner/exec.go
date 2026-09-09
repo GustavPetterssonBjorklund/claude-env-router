@@ -9,8 +9,6 @@ import (
 	"os/exec"
 )
 
-
-
 func Exec(ctx context.Context, binary string, args []string, env []string, dir string, stdout, stderr io.Writer) error {
 	cmd := exec.CommandContext(ctx, binary, args...)
 	cmd.Env = env

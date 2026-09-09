@@ -13,6 +13,8 @@ type options struct {
 	profile    string
 	claudeArgs []string
 	help       bool
+	secretOp   string
+	secretKey  string
 }
 
 func parseArgs(args []string) (options, error) {
@@ -23,6 +25,31 @@ func parseArgs(args []string) (options, error) {
 
 	for i := 1; i < len(args); i++ {
 		arg := args[i]
+		if arg == "secret" || arg == "secrets" {
+			if i+1 >= len(args) {
+				return opts, fmt.Errorf("%s requires an operation", arg)
+			}
+			op := args[i+1]
+			if op == "migrate" {
+				opts.secretOp = op
+				return opts, nil
+			}
+			if op != "set" && op != "unset" && op != "list" {
+				return opts, fmt.Errorf("unknown secret operation %s", op)
+			}
+			if i+2 >= len(args) {
+				return opts, fmt.Errorf("secret %s requires a profile", op)
+			}
+			opts.secretOp = op
+			opts.profile = args[i+2]
+			if op != "list" {
+				if i+3 >= len(args) {
+					return opts, fmt.Errorf("secret %s requires a key", op)
+				}
+				opts.secretKey = args[i+3]
+			}
+			return opts, nil
+		}
 		switch arg {
 		case "-h", "--help":
 			opts.help = true

@@ -24,7 +24,7 @@ func TestApplyProfilePrecedenceAndExpansion(t *testing.T) {
 			"TOKEN": "from-inline",
 			"PATH":  "$ROOT/bin",
 		},
-	})
+	}, nil)
 	if err != nil {
 		t.Fatalf("ApplyProfile() error = %v", err)
 	}

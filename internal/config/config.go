@@ -16,6 +16,7 @@ const (
 	DefaultConfigDirName    = "cer"
 	DefaultConfigFileName   = "config.toml"
 	EnvConfigPath           = "CER_CONFIG"
+	DefaultVaultFileName    = "secrets.vault"
 )
 
 var (
@@ -64,6 +65,7 @@ func defaultConfigPath() string {
 type FilePaths struct {
 	ConfigPath  string
 	ProfilesDir string
+	VaultPath   string
 }
 
 type Config struct {
@@ -80,6 +82,7 @@ func New() Config {
 		FilePaths: FilePaths{
 			ConfigPath:  ConfigPath,
 			ProfilesDir: ProfilesDir,
+			VaultPath:   filepath.Join(filepath.Dir(ConfigPath), DefaultVaultFileName),
 		},
 		Profiles: make(map[string]Profile),
 	}

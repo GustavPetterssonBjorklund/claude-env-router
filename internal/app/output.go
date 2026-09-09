@@ -13,6 +13,9 @@ import (
 
 func printUsage(w io.Writer) {
 	fmt.Fprintf(w, "Usage: %s [--config path] <profile> [-- claude args...]\n", environment.binaryName)
+	fmt.Fprintf(w, "       %s [--config path] secret set|unset <profile> <KEY>\n", environment.binaryName)
+	fmt.Fprintf(w, "       %s [--config path] secret list <profile>\n", environment.binaryName)
+	fmt.Fprintf(w, "       %s [--config path] secret migrate\n", environment.binaryName)
 }
 
 func printProfiles(w io.Writer, cfg config.Config) {

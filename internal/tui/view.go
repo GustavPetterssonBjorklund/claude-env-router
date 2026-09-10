@@ -38,7 +38,7 @@ func (m Model) View() string {
 		fmt.Fprintln(&b, errorStyle.Render(m.err))
 	}
 	fmt.Fprintln(&b)
-	fmt.Fprintln(&b, mutedStyle.Render("Enter select/confirm  n new env  Esc quit"))
+	fmt.Fprintln(&b, mutedStyle.Render("Enter select/confirm  e edit env  n new env  Esc quit"))
 	return b.String()
 }
 

@@ -68,40 +68,71 @@ func RunWithInput(args []string, stdin io.Reader, stdout, stderr io.Writer) int 
 	}
 
 	if opts.profile == "" {
-		result, err := tui.Run(tui.Input{
-			Config: cfg,
-			Stdin:  stdin,
-			Stdout: stdout,
-		})
-		if err != nil {
-			fmt.Fprintf(stderr, "run tui: %v\n", err)
-			return 1
-		}
-		if result.Canceled {
-			return 0
-		}
-		if result.Created != nil {
+		for {
+			result, err := tui.Run(tui.Input{
+				Config: cfg,
+				Stdin:  stdin,
+				Stdout: stdout,
+			})
+			if err != nil {
+				fmt.Fprintf(stderr, "run tui: %v\n", err)
+				return 1
+			}
+			if result.Canceled {
+				return 0
+			}
+
 			editor := os.Getenv("EDITOR")
-			if !editorConfigured(editor) {
-				fmt.Fprintln(stderr, "EDITOR is not set")
-				return 1
+			if result.Edit != "" {
+				if !editorConfigured(editor) {
+					fmt.Fprintln(stderr, "EDITOR is not set")
+					return 1
+				}
+				profile, ok := cfg.Profiles[result.Edit]
+				if !ok {
+					fmt.Fprintf(stderr, "unknown profile %q\n", result.Edit)
+					return 1
+				}
+				envPath, err := profileEnvPath(cfgPath, profile)
+				if err != nil {
+					fmt.Fprintf(stderr, "edit profile %s: %v\n", result.Edit, err)
+					continue
+				}
+				if err := openEditor(editor, envPath, stdin, stdout, stderr); err != nil {
+					fmt.Fprintf(stderr, "edit %s: %v\n", envPath, err)
+					return 1
+				}
+				cfg, err = loadConfigWithPaths(cfgPath)
+				if err != nil {
+					fmt.Fprintf(stderr, "load config: %v\n", err)
+					return 1
+				}
+				continue
 			}
-			envPath, err := createProfile(cfgPath, cfg, *result.Created)
-			if err != nil {
-				fmt.Fprintf(stderr, "create profile: %v\n", err)
-				return 1
+
+			if result.Created != nil {
+				if !editorConfigured(editor) {
+					fmt.Fprintln(stderr, "EDITOR is not set")
+					return 1
+				}
+				envPath, err := createProfile(cfgPath, cfg, *result.Created)
+				if err != nil {
+					fmt.Fprintf(stderr, "create profile: %v\n", err)
+					return 1
+				}
+				if err := openEditor(editor, envPath, stdin, stdout, stderr); err != nil {
+					fmt.Fprintf(stderr, "edit %s: %v\n", envPath, err)
+					return 1
+				}
+				cfg, err = loadConfigWithPaths(cfgPath)
+				if err != nil {
+					fmt.Fprintf(stderr, "load config: %v\n", err)
+					return 1
+				}
 			}
-			if err := openEditor(editor, envPath, stdin, stdout, stderr); err != nil {
-				fmt.Fprintf(stderr, "edit %s: %v\n", envPath, err)
-				return 1
-			}
-			cfg, err = config.LoadFile(cfgPath)
-			if err != nil {
-				fmt.Fprintf(stderr, "load config: %v\n", err)
-				return 1
-			}
+			opts.profile = result.Profile
+			break
 		}
-		opts.profile = result.Profile
 	}
 
 	profile, ok := cfg.Profiles[opts.profile]

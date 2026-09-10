@@ -67,6 +67,22 @@ func TestModelRejectsDuplicateProfile(t *testing.T) {
 	}
 }
 
+func TestModelEditsSelectedProfile(t *testing.T) {
+	cfg := config.New()
+	cfg.Profiles["work"] = config.NewProfile()
+
+	model := NewModel(cfg)
+	model = updateModel(t, model, key("e"))
+
+	result := model.Result()
+	if result.Edit != "work" {
+		t.Fatalf("edit profile = %q, want work", result.Edit)
+	}
+	if result.Canceled {
+		t.Fatal("result is canceled")
+	}
+}
+
 func updateModel(t *testing.T, model Model, msg tea.Msg) Model {
 	t.Helper()
 	updated, _ := model.Update(msg)

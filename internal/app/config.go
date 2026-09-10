@@ -12,6 +12,34 @@ import (
 	"github.com/GustavPetterssonBjorklund/claude-env-router/internal/tui"
 )
 
+func loadConfigWithPaths(path string) (config.Config, error) {
+	cfg, err := config.LoadFile(path)
+	if err != nil {
+		return config.Config{}, err
+	}
+	cfg.FilePaths.ConfigPath = path
+	cfg.FilePaths.VaultPath = filepath.Join(filepath.Dir(path), config.DefaultVaultFileName)
+	return cfg, nil
+}
+
+func profileEnvPath(configPath string, profile config.Profile) (string, error) {
+	if len(profile.EnvFiles) == 0 || profile.EnvFiles[0] == "" {
+		return "", fmt.Errorf("profile has no configured env file")
+	}
+	path := profile.EnvFiles[0]
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(filepath.Dir(configPath), path)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return "", fmt.Errorf("env file %q: %w", path, err)
+	}
+	if info.IsDir() {
+		return "", fmt.Errorf("env file %q is a directory", path)
+	}
+	return path, nil
+}
+
 func loadConfigForMode(path string, allowMissing bool) (config.Config, error) {
 	cfg, err := config.LoadFile(path)
 	if err == nil {

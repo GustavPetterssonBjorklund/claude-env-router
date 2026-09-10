@@ -13,6 +13,10 @@ Run Claude directly with a named environment profile:
 cer personal
 ```
 
+In the interactive chooser, press `e` to open the highlighted profile's first
+configured env file in `$EDITOR`. After the editor closes, the chooser remains
+open.
+
 Pass arguments through to Claude:
 
 ```sh

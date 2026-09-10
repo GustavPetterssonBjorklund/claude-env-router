@@ -84,3 +84,30 @@ func TestOpenEditorRequiresEditor(t *testing.T) {
 		t.Fatalf("openEditor() error = %v, want EDITOR error", err)
 	}
 }
+
+func TestProfileEnvPathUsesFirstRelativeEnvFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "work.env")
+	if err := os.WriteFile(path, []byte("TOKEN=value\n"), 0o600); err != nil {
+		t.Fatalf("write env file: %v", err)
+	}
+
+	got, err := profileEnvPath(filepath.Join(dir, "config.toml"), config.Profile{
+		EnvFiles: []string{"work.env", "common.env"},
+	})
+	if err != nil {
+		t.Fatalf("profileEnvPath() error = %v", err)
+	}
+	if got != path {
+		t.Fatalf("profileEnvPath() = %q, want %q", got, path)
+	}
+}
+
+func TestProfileEnvPathRequiresExistingFile(t *testing.T) {
+	_, err := profileEnvPath(filepath.Join(t.TempDir(), "config.toml"), config.Profile{
+		EnvFiles: []string{"missing.env"},
+	})
+	if err == nil {
+		t.Fatal("profileEnvPath() error = nil, want missing file error")
+	}
+}

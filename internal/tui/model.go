@@ -87,6 +87,14 @@ func (m Model) updateList(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.result = Result{Profile: m.names[m.cursor]}
 		m.finished = true
 		return m, tea.Quit
+	case "e":
+		if len(m.names) == 0 {
+			m.err = "no profiles configured; press n to create one"
+			return m, nil
+		}
+		m.result = Result{Edit: m.names[m.cursor]}
+		m.finished = true
+		return m, tea.Quit
 	case "n":
 		m.screen = screenName
 		m.input.Reset()

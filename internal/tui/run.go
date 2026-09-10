@@ -19,6 +19,7 @@ type Input struct {
 type Result struct {
 	Profile  string
 	Created  *CreatedProfile
+	Edit     string
 	Canceled bool
 }
 

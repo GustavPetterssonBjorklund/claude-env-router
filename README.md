@@ -1,10 +1,11 @@
 # Claude Env Router
 
-Switch between Claude Code environments without repeatedly exporting variables or
-editing shell configuration.
+`cer` lets you keep separate Claude Code setups—for example, personal, work, and
+another API provider—and start the one you want with a single command. Store API
+keys in encrypted secure storage instead of putting them in shell configuration,
+`.env` files, or a repository.
 
-`cer` groups environment files, environment variables, and Claude arguments into
-named profiles. Pick a profile interactively or launch one directly:
+Pick a profile interactively or launch one directly:
 
 ```sh
 cer
@@ -12,8 +13,8 @@ cer personal
 cer work -- --help
 ```
 
-This is useful when you use different API providers, credentials, projects, or
-Claude settings and want a simple way to keep them separate.
+Each profile can also include non-secret provider settings, Claude arguments,
+and optional environment files.
 
 ## Install
 
@@ -30,46 +31,48 @@ Make sure your Go bin directory is on your `PATH`, then check the installation:
 cer --help
 ```
 
-## Get started
+## Get started: store your API key securely
 
-Set your preferred editor and open the interactive profile picker:
+Create the configuration directory if needed:
 
 ```sh
-export EDITOR="vim" # or nano, code, etc.
-cer
+mkdir -p ~/.config/cer
 ```
 
-If no config exists yet, press `n` to create a profile. `cer` creates the config
-and an env file, opens the env file in your editor, and then starts Claude with
-that profile.
-
-You can also create the config yourself at `~/.config/cer/config.toml`:
+Then create `~/.config/cer/config.toml` with a profile for each setup you use.
+The profile itself contains no secret values:
 
 ```toml
 binary = "claude"
 
 [profiles.personal]
-env_files = ["personal.env"]
 args = []
 
 [profiles.work]
-env_files = ["work.env"]
 args = []
 ```
 
-Paths to env files are relative to the config file. For example,
-`~/.config/cer/personal.env` might contain:
+Save the API key for each profile. `cer` prompts without echoing the value:
 
-```dotenv
-ANTHROPIC_API_KEY=your-api-key
+```sh
+cer secret set personal ANTHROPIC_API_KEY
+cer secret set work ANTHROPIC_API_KEY
 ```
 
-Now choose a profile interactively with `cer`, or skip the picker by naming it:
+The values are encrypted in `~/.config/cer/secrets.vault`; the encryption key is
+stored in your operating system's credential store. The vault and its key are
+both required to read a secret.
+
+Start Claude with the profile you need:
 
 ```sh
 cer personal
 cer work
 ```
+
+Run `cer` with no profile to choose one interactively. The picker can create and
+edit profiles too; those actions use your configured `$EDITOR`, but an editor is
+not needed for the secure-storage workflow above.
 
 ## Use DeepSeek with Claude Code
 
@@ -82,21 +85,21 @@ env_files = ["deepseek.env"]
 args = []
 ```
 
-Create `deepseek.env` next to the config file with DeepSeek's Claude Code
-settings:
+Create `deepseek.env` next to the config file with DeepSeek's non-secret Claude
+Code settings:
 
 ```dotenv
 ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
-ANTHROPIC_MODEL=deepseek-flash[1m]
-ANTHROPIC_DEFAULT_OPUS_MODEL=deepseek-flash[1m]
-ANTHROPIC_DEFAULT_SONNET_MODEL=deepseek-flash[1m]
+ANTHROPIC_MODEL=deepseek-flash
+ANTHROPIC_DEFAULT_OPUS_MODEL=deepseek-flash
+ANTHROPIC_DEFAULT_SONNET_MODEL=deepseek-flash
 ANTHROPIC_DEFAULT_HAIKU_MODEL=deepseek-flash
 CLAUDE_CODE_SUBAGENT_MODEL=deepseek-flash
 CLAUDE_CODE_EFFORT_LEVEL=max
 CLAUDE_CODE_AUTO_COMPACT_WINDOW=786432
 ```
 
-Store your API key in `cer`'s encrypted vault and launch the profile:
+Store the API key in secure storage, then launch the profile:
 
 ```sh
 cer secret set deepseek ANTHROPIC_AUTH_TOKEN
@@ -126,10 +129,9 @@ cer --config ./examples/config.toml personal
 In the profile picker, press `e` to edit the highlighted profile's first env
 file. The picker reopens when your editor closes.
 
-## Keep secrets out of plain text
+## Manage secrets
 
-`cer` can store sensitive values in an encrypted vault. The encryption key is
-kept in your operating system's keychain.
+Use the vault for tokens, API keys, and other sensitive environment variables:
 
 ```sh
 # Prompt securely for a value
@@ -142,8 +144,9 @@ cer secret list personal
 cer secret unset personal ANTHROPIC_API_KEY
 ```
 
-Secrets override values from env files and inline profile variables. If your
-config already contains inline secrets, move them into the vault with:
+Vault secrets override values from environment files and inline profile
+variables. If your config already contains inline secrets, move them into the
+vault with:
 
 ```sh
 cer secret migrate
